@@ -2,13 +2,16 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const config = require('../config');
 
-function shouldHandle(msg) {
+function shouldHandle(msg, selfId) {
   if (msg.isStatus) return false;
   if (typeof msg.body !== 'string' || !msg.body.trim()) return false;
 
   if (config.allowedSenders.length === 0) {
     // Safest default: only respond in the "Message yourself" chat.
-    return msg.fromMe && msg.from === msg.to;
+    // NOTE: msg.to uses WhatsApp's newer "@lid" format in self-chats, which
+    // never matches msg.from's "@c.us" format — so we compare msg.from
+    // against our own JID (captured on 'ready') instead of from === to.
+    return msg.fromMe && msg.from === selfId;
   }
   return !msg.fromMe && config.allowedSenders.includes(msg.from);
 }
@@ -24,26 +27,37 @@ function createWhatsappClient(onMessage) {
   // track our own outgoing message IDs so we don't reply to ourselves forever.
   const sentByBot = new Set();
 
+  let selfId = null;
+
   client.on('qr', (qr) => {
     console.log('Scan this QR code with WhatsApp (Settings -> Linked Devices -> Link a device):');
     qrcode.generate(qr, { small: true });
   });
 
-  client.on('ready', () => console.log('WhatsApp client ready.'));
+  client.on('ready', () => {
+    selfId = client.info.wid._serialized;
+    console.log('WhatsApp client ready. Self ID:', selfId);
+  });
   client.on('auth_failure', (msg) => console.error('WhatsApp auth failure:', msg));
   client.on('disconnected', (reason) => console.warn('WhatsApp disconnected:', reason));
 
   client.on('message_create', async (msg) => {
+    console.log('EVENT FIRED:', { fromMe: msg.fromMe, from: msg.from, to: msg.to, body: msg.body });
+
     if (sentByBot.has(msg.id._serialized)) {
       sentByBot.delete(msg.id._serialized);
       return;
     }
-    if (!shouldHandle(msg)) return;
+
+    console.log('shouldHandle result:', shouldHandle(msg, selfId));
+    if (!shouldHandle(msg, selfId)) return;
 
     try {
       const reply = await onMessage(msg.body, msg.from);
       const sent = await msg.reply(reply);
-      sentByBot.add(sent.id._serialized);
+      if (sent && sent.id && sent.id._serialized) {
+        sentByBot.add(sent.id._serialized);
+      }
     } catch (err) {
       console.error('Error handling WhatsApp message:', err);
       try {
