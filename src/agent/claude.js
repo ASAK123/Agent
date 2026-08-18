@@ -2,6 +2,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const config = require('../config');
 const toolSchemas = require('./toolSchemas');
 const toolHandlers = require('../tools');
+const { DIVISION_NAMES } = require('./divisions');
 
 const client = new Anthropic({ apiKey: config.anthropicApiKey });
 
@@ -32,6 +33,11 @@ function systemPrompt() {
     'formatting. Confirm what you did or found. If a request is ambiguous (e.g. which contact, which ',
     'event), ask a brief clarifying question instead of guessing. Before deleting a calendar event, ',
     'confirm the details with the user first.',
+    '',
+    `Every calendar event belongs to one of these divisions: ${DIVISION_NAMES.join(', ')}. If it is not `,
+    'stated which division an event is for, ask; if the user says it applies to everyone or does not ',
+    'specify, use "צוות" (the team-wide default). Pass the division as the "division" field when creating ',
+    'or updating events - this sets a distinct calendar color per division.',
   ].join('\n');
 }
 
