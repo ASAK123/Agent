@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { google } = require('googleapis');
 const config = require('../config');
+const { colorIdForDivision, divisionForColorId } = require('../agent/divisions');
 
 let cachedClient = null;
 
@@ -64,10 +65,11 @@ async function listEvents({ timeMin, timeMax, maxResults, query } = {}) {
     location: e.location,
     start: e.start?.dateTime || e.start?.date,
     end: e.end?.dateTime || e.end?.date,
+    division: divisionForColorId(e.colorId),
   }));
 }
 
-async function createEvent({ summary, start, end, description, location }) {
+async function createEvent({ summary, start, end, description, location, division }) {
   const calendar = getCalendar();
   let endTime = end;
   if (!endTime && start && /^\d{4}-\d{2}-\d{2}T/.test(start)) {
@@ -82,6 +84,7 @@ async function createEvent({ summary, start, end, description, location }) {
       location,
       start: toEventTime(start),
       end: toEventTime(endTime || start),
+      colorId: colorIdForDivision(division),
     },
   });
 
@@ -91,10 +94,11 @@ async function createEvent({ summary, start, end, description, location }) {
     summary: e.summary,
     start: e.start?.dateTime || e.start?.date,
     end: e.end?.dateTime || e.end?.date,
+    division: divisionForColorId(e.colorId),
   };
 }
 
-async function updateEvent({ eventId, summary, start, end, description, location }) {
+async function updateEvent({ eventId, summary, start, end, description, location, division }) {
   const calendar = getCalendar();
   const requestBody = {};
   if (summary !== undefined) requestBody.summary = summary;
@@ -102,6 +106,7 @@ async function updateEvent({ eventId, summary, start, end, description, location
   if (location !== undefined) requestBody.location = location;
   if (start !== undefined) requestBody.start = toEventTime(start);
   if (end !== undefined) requestBody.end = toEventTime(end);
+  if (division !== undefined) requestBody.colorId = colorIdForDivision(division);
 
   const res = await calendar.events.patch({
     calendarId: config.googleCalendarId,
@@ -115,6 +120,7 @@ async function updateEvent({ eventId, summary, start, end, description, location
     summary: e.summary,
     start: e.start?.dateTime || e.start?.date,
     end: e.end?.dateTime || e.end?.date,
+    division: divisionForColorId(e.colorId),
   };
 }
 

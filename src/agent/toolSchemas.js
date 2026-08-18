@@ -1,6 +1,8 @@
 // Tool definitions passed to Claude. Keep this list small and specific -
 // it's easier to add a new tool later than to debug an overly broad one.
 
+const { DIVISION_NAMES } = require('./divisions');
+
 module.exports = [
   {
     name: 'lookup_contact',
@@ -126,6 +128,11 @@ module.exports = [
         },
         description: { type: 'string' },
         location: { type: 'string' },
+        division: {
+          type: 'string',
+          enum: DIVISION_NAMES,
+          description: 'Which division this event belongs to. Sets a distinct calendar color per division.',
+        },
       },
       required: ['summary', 'start'],
     },
@@ -143,6 +150,11 @@ module.exports = [
         end: { type: 'string', description: 'ISO 8601 datetime or date-only string' },
         description: { type: 'string' },
         location: { type: 'string' },
+        division: {
+          type: 'string',
+          enum: DIVISION_NAMES,
+          description: 'Which division this event belongs to. Sets a distinct calendar color per division.',
+        },
       },
       required: ['eventId'],
     },

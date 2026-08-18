@@ -19,7 +19,9 @@ const config = {
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/oauth2callback',
   googleTokenPath: process.env.GOOGLE_TOKEN_PATH || './data/google-token.json',
-  googleCalendarId: process.env.GOOGLE_CALENDAR_ID || 'primary',
+  googleCalendarId:
+    process.env.GOOGLE_CALENDAR_ID ||
+    '4d72237704a77a11e4de6e3bf3250ad4b10ad26f22f34e29d8c98c5f17e74f5a@group.calendar.google.com',
 
   timezone: process.env.TIMEZONE || 'UTC',
 
