@@ -131,7 +131,9 @@ module.exports = [
         division: {
           type: 'string',
           enum: DIVISION_NAMES,
-          description: 'Which division this event belongs to. Sets a distinct calendar color per division.',
+          description:
+            'Which division this event belongs to (Hebrew name). Sets a distinct calendar color per division. ' +
+            'Defaults to "צוות" (team-wide) if omitted.',
         },
       },
       required: ['summary', 'start'],
@@ -153,7 +155,8 @@ module.exports = [
         division: {
           type: 'string',
           enum: DIVISION_NAMES,
-          description: 'Which division this event belongs to. Sets a distinct calendar color per division.',
+          description:
+            'Which division this event belongs to (Hebrew name). Sets a distinct calendar color per division.',
         },
       },
       required: ['eventId'],

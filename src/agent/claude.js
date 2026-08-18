@@ -34,9 +34,10 @@ function systemPrompt() {
     'event), ask a brief clarifying question instead of guessing. Before deleting a calendar event, ',
     'confirm the details with the user first.',
     '',
-    `Every calendar event belongs to one of these divisions: ${DIVISION_NAMES.join(', ')}. Always ask `,
-    'which division an event belongs to if it is not stated, and pass it as the "division" field when ',
-    'creating or updating events - this sets a distinct calendar color per division.',
+    `Every calendar event belongs to one of these divisions: ${DIVISION_NAMES.join(', ')}. If it is not `,
+    'stated which division an event is for, ask; if the user says it applies to everyone or does not ',
+    'specify, use "צוות" (the team-wide default). Pass the division as the "division" field when creating ',
+    'or updating events - this sets a distinct calendar color per division.',
   ].join('\n');
 }
 
