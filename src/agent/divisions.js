@@ -2,14 +2,14 @@
 // 1 Lavender, 2 Sage, 3 Grape, 4 Flamingo, 5 Banana,
 // 6 Tangerine, 7 Peacock, 8 Graphite, 9 Blueberry, 10 Basil, 11 Tomato
 //
-// Radicchio and Amethyst (requested for S.N.C / Weapons) are only available as
-// *calendar* colors, not per-event colors - substituted with the closest event
-// colors available: Flamingo (soft red) and Grape (purple).
+// Radicchio, Cherry Blossom, and Amethyst (requested for S.N.C / Weapons) are only
+// available as *calendar* colors, not per-event colors - substituted with the closest
+// event colors available: Flamingo (soft red/pink) and Lavender (light purple).
 
 const DIVISIONS = [
   { hebrew: 'סונאר', english: 'Sonar', colorId: '5', colorName: 'Banana (yellow)' },
-  { hebrew: 'גנ"ק', english: 'S.N.C', colorId: '4', colorName: 'Flamingo (substitute for Radicchio)' },
-  { hebrew: 'נשק', english: 'Weapons', colorId: '3', colorName: 'Grape (substitute for Amethyst)' },
+  { hebrew: 'גנ"ק', english: 'S.N.C', colorId: '4', colorName: 'Flamingo (substitute for Radicchio/Cherry Blossom)' },
+  { hebrew: 'נשק', english: 'Weapons', colorId: '1', colorName: 'Lavender (substitute for Amethyst)' },
   { hebrew: 'טכנית', english: 'Technical', colorId: '8', colorName: 'Graphite' },
   { hebrew: 'סגן', english: 'XO', colorId: '10', colorName: 'Basil' },
   { hebrew: 'מפקד', english: 'Captain', colorId: '11', colorName: 'Tomato' },
