@@ -98,6 +98,21 @@ async function createEvent({ summary, start, end, description, location, divisio
   };
 }
 
+async function getEvent({ eventId }) {
+  const calendar = getCalendar();
+  const res = await calendar.events.get({ calendarId: config.googleCalendarId, eventId });
+  const e = res.data;
+  return {
+    eventId: e.id,
+    summary: e.summary,
+    description: e.description,
+    location: e.location,
+    start: e.start?.dateTime || e.start?.date,
+    end: e.end?.dateTime || e.end?.date,
+    division: divisionForColorId(e.colorId),
+  };
+}
+
 async function updateEvent({ eventId, summary, start, end, description, location, division }) {
   const calendar = getCalendar();
   const requestBody = {};
@@ -130,4 +145,4 @@ async function deleteEvent({ eventId }) {
   return { eventId, deleted: true };
 }
 
-module.exports = { listEvents, createEvent, updateEvent, deleteEvent };
+module.exports = { listEvents, getEvent, createEvent, updateEvent, deleteEvent };

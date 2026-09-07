@@ -174,4 +174,31 @@ module.exports = [
       required: ['eventId'],
     },
   },
+  {
+    name: 'send_event_reminder',
+    description:
+      'Send a WhatsApp reminder about a calendar event to one or more people. Phone numbers are looked ' +
+      'up from the Contacts sheet by name (NOT from Google Calendar attendees) - each recipient must ' +
+      'already exist there with a phone number; use lookup_contact to check first and upsert_contact if ' +
+      'one is missing. Look up the eventId first with list_calendar_events. Always confirm the recipient ' +
+      'list and message with the user before sending.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        eventId: { type: 'string', description: 'Google Calendar event ID to remind about' },
+        recipientNames: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Contact names (as they appear in the Contacts sheet) to send the reminder to',
+        },
+        message: {
+          type: 'string',
+          description:
+            'Optional custom reminder text. If omitted, a message is generated from the event\'s ' +
+            'summary, start time, and location.',
+        },
+      },
+      required: ['eventId', 'recipientNames'],
+    },
+  },
 ];

@@ -1,6 +1,7 @@
 const express = require('express');
 const config = require('./config');
 const { createWhatsappClient } = require('./whatsapp/client');
+const { setClient } = require('./whatsapp/sender');
 const { handleMessage } = require('./agent/claude');
 const excelTools = require('./tools/excelTools');
 
@@ -34,7 +35,8 @@ async function main() {
 
   app.listen(config.port, () => console.log(`Server listening on port ${config.port}`));
 
-  createWhatsappClient((text, senderId) => handleMessage(text, senderId));
+  const whatsappClient = createWhatsappClient((text, senderId) => handleMessage(text, senderId));
+  setClient(whatsappClient);
 }
 
 main();

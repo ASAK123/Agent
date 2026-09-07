@@ -25,6 +25,10 @@ const config = {
 
   timezone: process.env.TIMEZONE || 'UTC',
 
+  // Default country code used to turn local-format phone numbers (e.g. "054-...")
+  // from the Contacts sheet into WhatsApp IDs when sending reminders.
+  whatsappCountryCode: process.env.WHATSAPP_COUNTRY_CODE || '972',
+
   port: parseInt(process.env.PORT, 10) || 3000,
 };
 

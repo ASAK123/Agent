@@ -52,6 +52,7 @@ Message yourself on WhatsApp:
 - "Add 20 units of blue widgets to inventory"
 - "Book a dentist appointment next Tuesday at 3pm"
 - "What's on my calendar tomorrow?"
+- "Remind Dan and Noa about tomorrow's Sonar meeting"
 
 Or test without WhatsApp while developing:
 
@@ -68,10 +69,12 @@ src/
   server.js              Express entry point, wires WhatsApp <-> agent
   config.js              Env var loading
   whatsapp/client.js      whatsapp-web.js wrapper (QR login, message filter)
+  whatsapp/sender.js      Lets tools proactively send WhatsApp messages (e.g. reminders)
   agent/claude.js         Claude tool-use loop, per-sender conversation memory
   agent/toolSchemas.js    Tool definitions passed to Claude
   tools/excelTools.js     Contacts / Inventory / Orders sheet read+write
   tools/calendarTools.js  Google Calendar list/create/update/delete
+  tools/reminderTools.js  WhatsApp event reminders, phone numbers from Contacts
   tools/googleAuth.js     One-time OAuth2 setup script
   tools/index.js          Maps tool names -> handler functions
 data/
@@ -89,6 +92,12 @@ data/
 - Conversation memory is in-process and per WhatsApp sender; it resets on
   server restart. That's intentional for a lightweight personal assistant —
   swap in a persistent store if you need longer memory.
+- Event reminders look up recipients' phone numbers from the `Contacts`
+  sheet by name (Google Calendar attendee emails aren't used), then send a
+  WhatsApp message via the same linked device. Local-format numbers (e.g.
+  `054-...`) are normalized using `WHATSAPP_COUNTRY_CODE`; store numbers with
+  a `+` and country code in Excel to avoid ambiguity. The agent asks for
+  confirmation before sending, since it messages other people.
 - To add a new capability, add a handler in `tools/`, register it in
   `tools/index.js`, and describe it in `agent/toolSchemas.js`. Keep the tool
   set small and specific — it's easier to expand than to debug a bloated one.
