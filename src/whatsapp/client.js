@@ -8,10 +8,10 @@ function shouldHandle(msg, selfId) {
 
   if (config.allowedSenders.length === 0) {
     // Safest default: only respond in the "Message yourself" chat.
-    // NOTE: msg.to uses WhatsApp's newer "@lid" format in self-chats, which
-    // never matches msg.from's "@c.us" format — so we compare msg.from
-    // against our own JID (captured on 'ready') instead of from === to.
-    return msg.fromMe && msg.from === selfId;
+    // msg.from is always OUR OWN id for anything we send (self-chat or not),
+    // so it can't tell the two apart. msg.to is the actual recipient/chat,
+    // which equals our own id only in the self-chat - that's what we check.
+    return msg.fromMe && msg.to === selfId;
   }
   return !msg.fromMe && config.allowedSenders.includes(msg.from);
 }
