@@ -2,16 +2,17 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const config = require('../config');
 
-function shouldHandle(msg, selfId) {
+function shouldHandle(msg) {
   if (msg.isStatus) return false;
   if (typeof msg.body !== 'string' || !msg.body.trim()) return false;
 
   if (config.allowedSenders.length === 0) {
-    // Safest default: only respond in the "Message yourself" chat.
-    // msg.from is always OUR OWN id for anything we send (self-chat or not),
-    // so it can't tell the two apart. msg.to is the actual recipient/chat,
-    // which equals our own id only in the self-chat - that's what we check.
-    return msg.fromMe && msg.to === selfId;
+    // Safest default: only respond in the "Message yourself" chat, where
+    // sender and recipient are the same id (whatever format WhatsApp is
+    // using for it that day - @c.us, @lid, etc). Comparing to a separately
+    // captured "self id" is fragile since that can end up in a different
+    // format than what shows up on the message itself.
+    return msg.fromMe && msg.from === msg.to;
   }
   return !msg.fromMe && config.allowedSenders.includes(msg.from);
 }
@@ -27,17 +28,12 @@ function createWhatsappClient(onMessage) {
   // track our own outgoing message IDs so we don't reply to ourselves forever.
   const sentByBot = new Set();
 
-  let selfId = null;
-
   client.on('qr', (qr) => {
     console.log('Scan this QR code with WhatsApp (Settings -> Linked Devices -> Link a device):');
     qrcode.generate(qr, { small: true });
   });
 
-  client.on('ready', () => {
-    selfId = client.info.wid._serialized;
-    console.log('WhatsApp client ready. Self ID:', selfId);
-  });
+  client.on('ready', () => console.log('WhatsApp client ready.'));
   client.on('auth_failure', (msg) => console.error('WhatsApp auth failure:', msg));
   client.on('disconnected', (reason) => console.warn('WhatsApp disconnected:', reason));
 
@@ -49,8 +45,8 @@ function createWhatsappClient(onMessage) {
       return;
     }
 
-    console.log('shouldHandle result:', shouldHandle(msg, selfId));
-    if (!shouldHandle(msg, selfId)) return;
+    console.log('shouldHandle result:', shouldHandle(msg));
+    if (!shouldHandle(msg)) return;
 
     try {
       const reply = await onMessage(msg.body, msg.from);
