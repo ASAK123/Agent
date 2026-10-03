@@ -2,27 +2,23 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const config = require('../config');
 
-async function shouldHandle(msg) {
+function shouldHandle(msg) {
   if (msg.isStatus) return false;
   if (typeof msg.body !== 'string' || !msg.body.trim()) return false;
 
   if (config.allowedSenders.length === 0) {
-    // Safest default: only respond in the "Message yourself" chat.
-    // WhatsApp represents the same self-chat with different id schemes
-    // on different fields (msg.from in old @c.us form, msg.to in newer
-    // @lid form, or vice versa for messages the bot sends) - string
-    // comparisons between from/to/a captured "self id" are unreliable.
-    // Ask the library's own contact resolution instead.
-    if (!msg.fromMe) return false;
-    try {
-      const chat = await msg.getChat();
-      if (chat.isGroup) return false;
-      const contact = await chat.getContact();
-      return !!contact.isMe;
-    } catch (err) {
-      console.error('Failed to resolve chat/contact for self-chat check:', err);
+    // Safest default: only respond in the "Message yourself" chat, identified
+    // by its msg.to value. Neither comparing from===to nor resolving the
+    // chat/contact via the library works reliably here - WhatsApp's newer
+    // @lid id scheme trips up both (see WHATSAPP_SELF_CHAT_ID in .env.example
+    // for how to find this value for your own account).
+    if (!config.selfChatId) {
+      console.warn(
+        'WHATSAPP_SELF_CHAT_ID is not set - ignoring all messages. See .env.example.'
+      );
       return false;
     }
+    return msg.fromMe && msg.to === config.selfChatId;
   }
   return !msg.fromMe && config.allowedSenders.includes(msg.from);
 }
@@ -55,7 +51,7 @@ function createWhatsappClient(onMessage) {
       return;
     }
 
-    const handled = await shouldHandle(msg);
+    const handled = shouldHandle(msg);
     console.log('shouldHandle result:', handled);
     if (!handled) return;
 

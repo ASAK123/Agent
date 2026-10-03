@@ -12,6 +12,7 @@ const config = {
   claudeModel: process.env.CLAUDE_MODEL || 'claude-sonnet-5',
 
   allowedSenders: parseSenders(process.env.ALLOWED_SENDERS),
+  selfChatId: process.env.WHATSAPP_SELF_CHAT_ID || '',
 
   excelFilePath: process.env.EXCEL_FILE_PATH || './data/workbook.xlsx',
 
