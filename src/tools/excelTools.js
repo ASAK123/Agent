@@ -4,7 +4,10 @@ const ExcelJS = require('exceljs');
 const config = require('../config');
 
 const SHEETS = {
-  CONTACTS: { name: 'Contacts', headers: ['Name', 'Phone', 'Email', 'Notes'] },
+  CONTACTS: {
+    name: 'Contacts',
+    headers: ['מחלקה', 'שם', 'שם משפחה', 'מ.א.', 'ת.ז.', 'כתובת', 'מייל', 'טלפון', 'Notes'],
+  },
   INVENTORY: { name: 'Inventory', headers: ['Item', 'Quantity', 'Unit', 'Notes'] },
   ORDERS: {
     name: 'Orders',
@@ -59,7 +62,7 @@ function headerIndex(sheet, headers) {
   const headerRow = sheet.getRow(1).values; // 1-indexed, values[0] is undefined
   const index = {};
   for (const header of headers) {
-    const col = headerRow.findIndex((v) => v === header);
+    const col = headerRow.findIndex((v) => typeof v === 'string' && v.trim() === header);
     if (col === -1) throw new Error(`Column "${header}" not found in sheet "${sheet.name}"`);
     index[header] = col;
   }
@@ -81,50 +84,96 @@ function rowsAsObjects(sheet, headers) {
 }
 
 function normalize(str) {
-  return String(str || '').trim().toLowerCase();
+  return String(str ?? '').trim().toLowerCase();
+}
+
+// The sheet spells גנ"ק with several different quote characters (", ״, ”);
+// fold them all together so division filters match regardless.
+function normalizeDivision(str) {
+  return normalize(str).replace(/["'״׳”“’‘]/g, '"');
+}
+
+// Personal/ID numbers are stored as numbers in the sheet; keep that, but leave
+// anything with a leading zero (or non-digits) as text so nothing is lost.
+function idValue(value) {
+  const str = String(value).trim();
+  return /^[1-9]\d*$/.test(str) ? Number(str) : str;
 }
 
 // ---- Contacts ----
 
-async function lookupContact({ name }) {
-  const workbook = await loadWorkbook();
-  const sheet = getSheet(workbook, SHEETS.CONTACTS);
-  const rows = rowsAsObjects(sheet, SHEETS.CONTACTS.headers);
-  const needle = normalize(name);
-  return rows
-    .filter((r) => normalize(r.Name).includes(needle))
-    .map((r) => ({ name: r.Name, phone: r.Phone, email: r.Email, notes: r.Notes }));
+const CONTACT_FIELDS = {
+  division: 'מחלקה',
+  firstName: 'שם',
+  lastName: 'שם משפחה',
+  personalNumber: 'מ.א.',
+  idNumber: 'ת.ז.',
+  address: 'כתובת',
+  email: 'מייל',
+  phone: 'טלפון',
+  notes: 'Notes',
+};
+
+function contactFromRow(r) {
+  const contact = {};
+  for (const [field, header] of Object.entries(CONTACT_FIELDS)) contact[field] = r[header];
+  return contact;
 }
 
-async function upsertContact({ name, phone, email, notes }) {
+function fullName(r) {
+  return `${r[CONTACT_FIELDS.firstName] ?? ''} ${r[CONTACT_FIELDS.lastName] ?? ''}`;
+}
+
+async function lookupContact({ name, division }) {
+  const workbook = await loadWorkbook();
+  const sheet = getSheet(workbook, SHEETS.CONTACTS);
+  let rows = rowsAsObjects(sheet, SHEETS.CONTACTS.headers);
+
+  if (division) {
+    const wanted = normalizeDivision(division);
+    rows = rows.filter((r) => normalizeDivision(r[CONTACT_FIELDS.division]) === wanted);
+  }
+  if (name) {
+    const needle = normalize(name);
+    rows = rows.filter((r) => normalize(fullName(r)).includes(needle));
+  }
+  return rows.map(contactFromRow);
+}
+
+async function upsertContact(input) {
   return withLock(async () => {
     const workbook = await loadWorkbook();
     const sheet = getSheet(workbook, SHEETS.CONTACTS);
     const idx = headerIndex(sheet, SHEETS.CONTACTS.headers);
-    const needle = normalize(name);
+    const first = normalize(input.firstName);
+    const last = normalize(input.lastName);
 
     let targetRow = null;
     sheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1 || targetRow) return;
-      if (normalize(row.values[idx.Name]) === needle) targetRow = row;
+      if (
+        normalize(row.values[idx[CONTACT_FIELDS.firstName]]) === first &&
+        normalize(row.values[idx[CONTACT_FIELDS.lastName]]) === last
+      ) {
+        targetRow = row;
+      }
     });
 
     if (!targetRow) {
       targetRow = sheet.addRow([]);
     }
-    targetRow.getCell(idx.Name).value = name;
-    if (phone !== undefined) targetRow.getCell(idx.Phone).value = phone;
-    if (email !== undefined) targetRow.getCell(idx.Email).value = email;
-    if (notes !== undefined) targetRow.getCell(idx.Notes).value = notes;
+    for (const [field, header] of Object.entries(CONTACT_FIELDS)) {
+      if (input[field] === undefined) continue;
+      const value =
+        field === 'personalNumber' || field === 'idNumber' ? idValue(input[field]) : input[field];
+      targetRow.getCell(idx[header]).value = value;
+    }
     targetRow.commit();
 
     await saveWorkbook(workbook);
-    return {
-      name: targetRow.getCell(idx.Name).value,
-      phone: targetRow.getCell(idx.Phone).value,
-      email: targetRow.getCell(idx.Email).value,
-      notes: targetRow.getCell(idx.Notes).value,
-    };
+    const saved = {};
+    for (const header of SHEETS.CONTACTS.headers) saved[header] = targetRow.getCell(idx[header]).value;
+    return contactFromRow(saved);
   });
 }
 

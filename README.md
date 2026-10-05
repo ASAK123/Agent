@@ -44,6 +44,8 @@ On first run it prints a QR code — scan it from WhatsApp on your phone under
 
 The Excel workbook (`data/workbook.xlsx` by default) is created
 automatically on first run with `Contacts`, `Inventory`, and `Orders` sheets.
+The `Contacts` sheet uses Hebrew headers: `מחלקה`, `שם`, `שם משפחה`, `מ.א.`,
+`ת.ז.`, `כתובת`, `מייל`, `טלפון`, `Notes`.
 
 ## 4. Try it
 

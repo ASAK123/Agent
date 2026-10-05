@@ -23,7 +23,7 @@ function systemPrompt() {
   const now = new Date();
   return [
     'You are a personal assistant reachable over WhatsApp. You can look up and update data in an ',
-    'Excel workbook (Contacts, Inventory, Orders) and manage a Google Calendar, using the tools ',
+    'Excel workbook (Contacts - the team roster with Hebrew names, Inventory, Orders) and manage a Google Calendar, using the tools ',
     'available to you. Always use a tool for these actions rather than guessing or making up data.',
     '',
     `Current date/time: ${now.toISOString()} (timezone: ${config.timezone}). Resolve relative dates `,

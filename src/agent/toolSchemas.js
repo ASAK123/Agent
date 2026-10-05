@@ -7,28 +7,35 @@ module.exports = [
   {
     name: 'lookup_contact',
     description:
-      'Search the Contacts sheet by (partial, case-insensitive) name and return matches with phone/email/notes.',
+      'Search the Contacts sheet (team members) by partial first/last name and/or division. Returns division, ' +
+      'first/last name, personal number (מ.א.), ID number (ת.ז.), address, email, phone and notes. ' +
+      'Names are stored in Hebrew. Give a division with no name to list everyone in it.',
     input_schema: {
       type: 'object',
       properties: {
-        name: { type: 'string', description: 'Full or partial contact name to search for' },
+        name: { type: 'string', description: 'Full or partial name (first, last, or "first last")' },
+        division: { type: 'string', enum: DIVISION_NAMES, description: 'Only return contacts in this division' },
       },
-      required: ['name'],
     },
   },
   {
     name: 'upsert_contact',
     description:
-      'Create a new contact or update an existing one (matched by exact name). Only provided fields are changed.',
+      'Create a new contact or update an existing one (matched by exact first + last name). Only provided fields are changed.',
     input_schema: {
       type: 'object',
       properties: {
-        name: { type: 'string', description: 'Contact name (used to find an existing contact)' },
-        phone: { type: 'string' },
-        email: { type: 'string' },
+        firstName: { type: 'string', description: 'First name (שם)' },
+        lastName: { type: 'string', description: 'Last name (שם משפחה)' },
+        division: { type: 'string', enum: DIVISION_NAMES, description: 'Division (מחלקה)' },
+        personalNumber: { type: 'string', description: 'Personal number (מ.א.)' },
+        idNumber: { type: 'string', description: 'National ID number (ת.ז.)' },
+        address: { type: 'string', description: 'Address (כתובת)' },
+        email: { type: 'string', description: 'Email (מייל)' },
+        phone: { type: 'string', description: 'Phone (טלפון)' },
         notes: { type: 'string' },
       },
-      required: ['name'],
+      required: ['firstName', 'lastName'],
     },
   },
   {
