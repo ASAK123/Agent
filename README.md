@@ -42,6 +42,24 @@ npm start
 On first run it prints a QR code — scan it from WhatsApp on your phone under
 **Settings → Linked Devices → Link a device**. After that it stays linked.
 
+### Running it for a long time
+
+`npm start` is meant to be left running:
+- **Sleep / wake:** when the computer wakes up, the agent notices and
+  reconnects WhatsApp by itself. No need to re-run it or scan the QR again.
+- **Lost connection:** every minute it checks that WhatsApp is still
+  connected and reconnects if it isn't.
+- **Crashes:** a small supervisor (`src/supervisor.js`) restarts the app if
+  it ever exits, waiting a little longer after each crash in a row.
+- **Keep awake (optional):** set `KEEP_AWAKE=true` in `.env` to stop the
+  computer from going to sleep while the agent runs (Windows, macOS, and
+  Linux with systemd). Closing a laptop lid can still put it to sleep,
+  depending on your power settings.
+
+Messages that arrive while the computer is asleep are not answered after it
+wakes; send them again. Conversation memory resets only when the whole
+process restarts. Use `npm run start:once` to run without the supervisor.
+
 The Excel workbook (`data/workbook.xlsx` by default) is created
 automatically on first run with `Contacts`, `Inventory`, and `Orders` sheets.
 

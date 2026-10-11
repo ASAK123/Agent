@@ -5,7 +5,8 @@
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node src/supervisor.js",
+    "start:once": "node src/server.js",
     "dev": "nodemon src/server.js"
   },
   "dependencies": {

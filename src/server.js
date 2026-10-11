@@ -7,7 +7,7 @@ const excelTools = require('./tools/excelTools');
 async function main() {
   if (!config.anthropicApiKey) {
     console.error('ANTHROPIC_API_KEY is not set. Copy .env.example to .env and fill it in.');
-    process.exit(1);
+    process.exit(78); // config error: tells the supervisor not to restart
   }
 
   await excelTools.ensureWorkbook();
@@ -37,4 +37,11 @@ async function main() {
   createWhatsappClient((text, senderId) => handleMessage(text, senderId));
 }
 
-main();
+// Stray errors from the WhatsApp browser (common right after the computer wakes
+// up) shouldn't take the whole agent down - the WhatsApp watchdog reconnects.
+process.on('unhandledRejection', (err) => console.error('Unhandled rejection:', err));
+
+main().catch((err) => {
+  console.error('Fatal startup error:', err);
+  process.exit(1);
+});
