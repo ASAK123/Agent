@@ -98,7 +98,7 @@ function suggestSlots({
   windowStart,
   windowEnd,
   timeZone,
-  workdayStart = '09:00',
+  workdayStart = '08:00',
   workdayEnd = '18:00',
   workDays = [0, 1, 2, 3, 4],
   preferredTimeOfDay,
