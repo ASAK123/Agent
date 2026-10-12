@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-function parseSenders(raw) {
+function parseList(raw) {
   return (raw || '')
     .split(',')
     .map((s) => s.trim())
@@ -11,7 +11,7 @@ const config = {
   anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
   claudeModel: process.env.CLAUDE_MODEL || 'claude-sonnet-5',
 
-  allowedSenders: parseSenders(process.env.ALLOWED_SENDERS),
+  allowedSenders: parseList(process.env.ALLOWED_SENDERS),
   selfChatId: process.env.WHATSAPP_SELF_CHAT_ID || '',
 
   excelFilePath: process.env.EXCEL_FILE_PATH || './data/workbook.xlsx',
@@ -26,7 +26,19 @@ const config = {
 
   timezone: process.env.TIMEZONE || 'UTC',
 
+  // Used by suggest_meeting_times. Busy time is read from every calendar listed in
+  // AVAILABILITY_CALENDAR_IDS (defaults to the managed calendar plus your primary one).
+  availabilityCalendarIds: parseList(process.env.AVAILABILITY_CALENDAR_IDS),
+  workdayStart: process.env.WORKDAY_START || '09:00',
+  workdayEnd: process.env.WORKDAY_END || '18:00',
+  // 0 = Sunday ... 6 = Saturday. Default is an Israeli work week (Sun-Thu).
+  workDays: parseList(process.env.WORK_DAYS || '0,1,2,3,4').map(Number),
+
   port: parseInt(process.env.PORT, 10) || 3000,
 };
+
+if (!config.availabilityCalendarIds.length) {
+  config.availabilityCalendarIds = [config.googleCalendarId, 'primary'];
+}
 
 module.exports = config;

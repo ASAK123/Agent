@@ -52,6 +52,9 @@ Message yourself on WhatsApp:
 - "Add 20 units of blue widgets to inventory"
 - "Book a dentist appointment next Tuesday at 3pm"
 - "What's on my calendar tomorrow?"
+- "I need a 30 min meeting, when am I available?" — returns a ranked list of
+  free slots (within `WORKDAY_START`–`WORKDAY_END` on `WORK_DAYS`); reply with
+  a number to book it.
 
 Or test without WhatsApp while developing:
 
