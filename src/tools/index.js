@@ -14,4 +14,5 @@ module.exports = {
   create_calendar_event: calendarTools.createEvent,
   update_calendar_event: calendarTools.updateEvent,
   delete_calendar_event: calendarTools.deleteEvent,
+  suggest_meeting_times: calendarTools.suggestMeetingTimes,
 };

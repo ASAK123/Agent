@@ -174,4 +174,43 @@ module.exports = [
       required: ['eventId'],
     },
   },
+  {
+    name: 'suggest_meeting_times',
+    description:
+      'Find free time slots for a meeting of a given length and return them ranked best-first. ' +
+      'Checks busy time across the user\'s calendars and only suggests slots within working hours. ' +
+      'Ranking prefers sooner days, lighter days, slots with a buffer around other meetings, and avoids lunch. ' +
+      'Use this whenever the user asks when they are free/available or to find a time for something.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        durationMinutes: { type: 'number', description: 'Meeting length in minutes, e.g. 30' },
+        timeMin: {
+          type: 'string',
+          description: 'ISO 8601 datetime to start searching from. Defaults to now.',
+        },
+        timeMax: {
+          type: 'string',
+          description:
+            'ISO 8601 datetime to stop searching at. Defaults to 7 days after timeMin. ' +
+            'Narrow timeMin/timeMax when the user names a specific day or range (e.g. "tomorrow", "next week").',
+        },
+        preferredTimeOfDay: {
+          type: 'string',
+          enum: ['morning', 'afternoon', 'evening'],
+          description: 'Boost slots in this part of the day, if the user expressed a preference',
+        },
+        workdayStart: {
+          type: 'string',
+          description: 'Override start of working hours, "HH:MM" local time (default from config, 09:00)',
+        },
+        workdayEnd: {
+          type: 'string',
+          description: 'Override end of working hours, "HH:MM" local time (default from config, 18:00)',
+        },
+        maxSuggestions: { type: 'number', description: 'How many slots to return, default 5' },
+      },
+      required: ['durationMinutes'],
+    },
+  },
 ];
