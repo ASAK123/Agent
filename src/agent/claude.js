@@ -98,6 +98,7 @@ async function handleMessage(text, senderId) {
       const toolResults = [];
       for (const block of toolUseBlocks) {
         const result = await runTool(block.name, block.input);
+        console.log(`[tool ${i}] ${block.name}(${JSON.stringify(block.input)}) ->`, JSON.stringify(result).slice(0, 500));
         toolResults.push({
           type: 'tool_result',
           tool_use_id: block.id,
@@ -105,6 +106,10 @@ async function handleMessage(text, senderId) {
         });
       }
       turn.push({ role: 'user', content: toolResults });
+
+      if (i === MAX_TOOL_ITERATIONS - 1) {
+        console.warn(`Hit MAX_TOOL_ITERATIONS (${MAX_TOOL_ITERATIONS}) without a final answer for sender ${senderId}`);
+      }
     }
   } catch (err) {
     // A failure partway through (API error, network blip, ...) can leave this
