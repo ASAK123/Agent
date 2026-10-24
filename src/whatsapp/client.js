@@ -27,6 +27,15 @@ function withTimeout(promise, ms, label) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+function killBrowser(c) {
+  try {
+    const proc = c && c.pupBrowser && c.pupBrowser.process();
+    if (proc && proc.exitCode === null) proc.kill('SIGKILL');
+  } catch (err) {
+    console.warn('Could not kill the old WhatsApp browser:', err.message);
+  }
+}
+
 function shouldHandle(msg) {
   if (msg.isStatus) return false;
   if (typeof msg.body !== 'string' || !msg.body.trim()) return false;
@@ -150,6 +159,7 @@ function createWhatsappClient(onMessage) {
     if (!ready) failedRestarts += 1;
     if (failedRestarts > MAX_FAILED_RESTARTS) {
       console.error('WhatsApp keeps failing to reconnect - exiting so the supervisor restarts the app.');
+      killBrowser(client);
       process.exit(1);
     }
 
@@ -160,6 +170,9 @@ function createWhatsappClient(onMessage) {
       await withTimeout(old.destroy(), DESTROY_TIMEOUT_MS, 'client.destroy()');
     } catch (err) {
       console.warn('Could not close the old WhatsApp browser cleanly:', err.message);
+      // A browser left running keeps the saved session folder locked, and the
+      // new one would fail to start - so force it closed.
+      killBrowser(old);
     }
 
     setTimeout(() => {
