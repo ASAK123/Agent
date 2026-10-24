@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { google } = require('googleapis');
 const config = require('../config');
+const { suggestSlots } = require('./availability');
 const { colorIdForDivision, divisionForColorId } = require('../agent/divisions');
 
 let cachedClient = null;
@@ -130,4 +131,60 @@ async function deleteEvent({ eventId }) {
   return { eventId, deleted: true };
 }
 
-module.exports = { listEvents, createEvent, updateEvent, deleteEvent };
+async function suggestMeetingTimes({
+  durationMinutes,
+  timeMin,
+  timeMax,
+  preferredTimeOfDay,
+  workdayStart,
+  workdayEnd,
+  maxSuggestions,
+}) {
+  if (!durationMinutes || durationMinutes <= 0) throw new Error('durationMinutes must be a positive number');
+
+  const windowStart = timeMin ? new Date(timeMin) : new Date();
+  const windowEnd = timeMax
+    ? new Date(timeMax)
+    : new Date(windowStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const calendarIds = config.availabilityCalendarIds;
+  const calendar = getCalendar();
+  const res = await calendar.freebusy.query({
+    requestBody: {
+      timeMin: windowStart.toISOString(),
+      timeMax: windowEnd.toISOString(),
+      timeZone: config.timezone,
+      items: calendarIds.map((id) => ({ id })),
+    },
+  });
+
+  const busy = [];
+  const unavailableCalendars = [];
+  for (const [id, cal] of Object.entries(res.data.calendars || {})) {
+    if (cal.errors?.length) unavailableCalendars.push(id);
+    busy.push(...(cal.busy || []));
+  }
+
+  const suggestions = suggestSlots({
+    busy,
+    durationMinutes,
+    windowStart,
+    windowEnd,
+    timeZone: config.timezone,
+    workdayStart: workdayStart || config.workdayStart,
+    workdayEnd: workdayEnd || config.workdayEnd,
+    workDays: config.workDays,
+    preferredTimeOfDay,
+    maxSuggestions: maxSuggestions && maxSuggestions > 0 ? maxSuggestions : 5,
+  });
+
+  return {
+    durationMinutes,
+    searchedFrom: windowStart.toISOString(),
+    searchedUntil: windowEnd.toISOString(),
+    suggestions,
+    ...(unavailableCalendars.length && { unavailableCalendars }),
+  };
+}
+
+module.exports = { listEvents, createEvent, updateEvent, deleteEvent, suggestMeetingTimes };

@@ -45,6 +45,11 @@ function systemPrompt() {
     'Use a relevant emoji at the start of a line sparingly, only where it adds quick visual meaning ',
     '(✅ confirmations, 📅 calendar, 📞 contacts, 📦 inventory) - don\'t overuse them.',
     '',
+    'When the user asks when they are free or wants to find time for a meeting, call ',
+    'suggest_meeting_times and reply with a numbered list in the returned rank order (best first), ',
+    'each with a short reason, e.g. "*1.* Tue 13/10 10:00-10:30 _(light day)_". Then offer to book ',
+    'one - if they pick a number, create the event with that slot\'s exact start/end.',
+    '',
     'Confirm what you did or found. If a request is ambiguous (e.g. which contact, which event), ask ',
     'a brief clarifying question instead of guessing. Before deleting a calendar event, confirm the ',
     'details with the user first.',
@@ -67,38 +72,53 @@ async function handleMessage(text, senderId) {
   turns.push(turn);
 
   let finalText = '';
-  for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
-    const messages = turns.flat();
-    const response = await client.messages.create({
-      model: config.claudeModel,
-      max_tokens: 1024,
-      system: systemPrompt(),
-      tools: toolSchemas,
-      messages,
-    });
-
-    turn.push({ role: 'assistant', content: response.content });
-
-    if (response.stop_reason !== 'tool_use') {
-      finalText = response.content
-        .filter((b) => b.type === 'text')
-        .map((b) => b.text)
-        .join('\n')
-        .trim();
-      break;
-    }
-
-    const toolUseBlocks = response.content.filter((b) => b.type === 'tool_use');
-    const toolResults = [];
-    for (const block of toolUseBlocks) {
-      const result = await runTool(block.name, block.input);
-      toolResults.push({
-        type: 'tool_result',
-        tool_use_id: block.id,
-        content: JSON.stringify(result),
+  try {
+    for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+      const messages = turns.flat();
+      const response = await client.messages.create({
+        model: config.claudeModel,
+        max_tokens: 1024,
+        system: systemPrompt(),
+        tools: toolSchemas,
+        messages,
       });
+
+      turn.push({ role: 'assistant', content: response.content });
+
+      if (response.stop_reason !== 'tool_use') {
+        finalText = response.content
+          .filter((b) => b.type === 'text')
+          .map((b) => b.text)
+          .join('\n')
+          .trim();
+        break;
+      }
+
+      const toolUseBlocks = response.content.filter((b) => b.type === 'tool_use');
+      const toolResults = [];
+      for (const block of toolUseBlocks) {
+        const result = await runTool(block.name, block.input);
+        console.log(`[tool ${i}] ${block.name}(${JSON.stringify(block.input)}) ->`, JSON.stringify(result).slice(0, 500));
+        toolResults.push({
+          type: 'tool_result',
+          tool_use_id: block.id,
+          content: JSON.stringify(result),
+        });
+      }
+      turn.push({ role: 'user', content: toolResults });
+
+      if (i === MAX_TOOL_ITERATIONS - 1) {
+        console.warn(`Hit MAX_TOOL_ITERATIONS (${MAX_TOOL_ITERATIONS}) without a final answer for sender ${senderId}`);
+      }
     }
-    turn.push({ role: 'user', content: toolResults });
+  } catch (err) {
+    // A failure partway through (API error, network blip, ...) can leave this
+    // turn ending in an assistant tool_use with no matching tool_result yet.
+    // Discard the whole turn rather than let that corrupt all future requests
+    // for this sender - every later call would hit the same 400 forever.
+    const idx = turns.indexOf(turn);
+    if (idx !== -1) turns.splice(idx, 1);
+    throw err;
   }
 
   while (turns.length > MAX_TURNS_PER_SENDER) turns.shift();
