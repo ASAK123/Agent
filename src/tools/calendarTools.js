@@ -41,6 +41,13 @@ function getCalendar() {
   return google.calendar({ version: 'v3', auth: getAuthClient() });
 }
 
+const DESCRIPTION_PREVIEW_LENGTH = 150;
+
+function truncate(text, maxLength) {
+  if (!text || text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength)}…`;
+}
+
 function toEventTime(dateTime) {
   if (!dateTime) return undefined;
   // Date-only strings ("2026-08-20") become Google all-day events.
@@ -62,7 +69,10 @@ async function listEvents({ timeMin, timeMax, maxResults, query } = {}) {
   return (res.data.items || []).map((e) => ({
     eventId: e.id,
     summary: e.summary,
-    description: e.description,
+    // Truncated: full free-text notes are rarely needed just to list a
+    // schedule, and they'd otherwise be repeated in full for every event on
+    // every tool call, which adds up fast for a busy calendar.
+    description: truncate(e.description, DESCRIPTION_PREVIEW_LENGTH),
     location: e.location,
     start: e.start?.dateTime || e.start?.date,
     end: e.end?.dateTime || e.end?.date,
