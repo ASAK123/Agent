@@ -71,7 +71,7 @@ async function handleMessage(text, senderId) {
     const messages = turns.flat();
     const response = await client.messages.create({
       model: config.claudeModel,
-      max_tokens: 1024,
+      max_tokens: 4096,
       system: systemPrompt(),
       tools: toolSchemas,
       messages,
@@ -85,6 +85,10 @@ async function handleMessage(text, senderId) {
         .map((b) => b.text)
         .join('\n')
         .trim();
+      if (response.stop_reason === 'max_tokens') {
+        console.warn(`Reply for ${senderId} was cut off at max_tokens.`);
+        finalText += '\n\n_(message got cut off - ask me to continue if needed)_';
+      }
       break;
     }
 
