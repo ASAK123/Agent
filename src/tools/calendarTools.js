@@ -1,6 +1,7 @@
 const fs = require('fs');
 const { google } = require('googleapis');
 const config = require('../config');
+const { suggestSlots } = require('./availability');
 const { colorIdForDivision, divisionForColorId } = require('../agent/divisions');
 
 let cachedClient = null;
@@ -40,6 +41,13 @@ function getCalendar() {
   return google.calendar({ version: 'v3', auth: getAuthClient() });
 }
 
+const DESCRIPTION_PREVIEW_LENGTH = 150;
+
+function truncate(text, maxLength) {
+  if (!text || text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength)}…`;
+}
+
 function toEventTime(dateTime) {
   if (!dateTime) return undefined;
   // Date-only strings ("2026-08-20") become Google all-day events.
@@ -61,7 +69,10 @@ async function listEvents({ timeMin, timeMax, maxResults, query } = {}) {
   return (res.data.items || []).map((e) => ({
     eventId: e.id,
     summary: e.summary,
-    description: e.description,
+    // Truncated: full free-text notes are rarely needed just to list a
+    // schedule, and they'd otherwise be repeated in full for every event on
+    // every tool call, which adds up fast for a busy calendar.
+    description: truncate(e.description, DESCRIPTION_PREVIEW_LENGTH),
     location: e.location,
     start: e.start?.dateTime || e.start?.date,
     end: e.end?.dateTime || e.end?.date,
@@ -130,4 +141,60 @@ async function deleteEvent({ eventId }) {
   return { eventId, deleted: true };
 }
 
-module.exports = { listEvents, createEvent, updateEvent, deleteEvent };
+async function suggestMeetingTimes({
+  durationMinutes,
+  timeMin,
+  timeMax,
+  preferredTimeOfDay,
+  workdayStart,
+  workdayEnd,
+  maxSuggestions,
+}) {
+  if (!durationMinutes || durationMinutes <= 0) throw new Error('durationMinutes must be a positive number');
+
+  const windowStart = timeMin ? new Date(timeMin) : new Date();
+  const windowEnd = timeMax
+    ? new Date(timeMax)
+    : new Date(windowStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const calendarIds = config.availabilityCalendarIds;
+  const calendar = getCalendar();
+  const res = await calendar.freebusy.query({
+    requestBody: {
+      timeMin: windowStart.toISOString(),
+      timeMax: windowEnd.toISOString(),
+      timeZone: config.timezone,
+      items: calendarIds.map((id) => ({ id })),
+    },
+  });
+
+  const busy = [];
+  const unavailableCalendars = [];
+  for (const [id, cal] of Object.entries(res.data.calendars || {})) {
+    if (cal.errors?.length) unavailableCalendars.push(id);
+    busy.push(...(cal.busy || []));
+  }
+
+  const suggestions = suggestSlots({
+    busy,
+    durationMinutes,
+    windowStart,
+    windowEnd,
+    timeZone: config.timezone,
+    workdayStart: workdayStart || config.workdayStart,
+    workdayEnd: workdayEnd || config.workdayEnd,
+    workDays: config.workDays,
+    preferredTimeOfDay,
+    maxSuggestions: maxSuggestions && maxSuggestions > 0 ? maxSuggestions : 5,
+  });
+
+  return {
+    durationMinutes,
+    searchedFrom: windowStart.toISOString(),
+    searchedUntil: windowEnd.toISOString(),
+    suggestions,
+    ...(unavailableCalendars.length && { unavailableCalendars }),
+  };
+}
+
+module.exports = { listEvents, createEvent, updateEvent, deleteEvent, suggestMeetingTimes };
